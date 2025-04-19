@@ -1,13 +1,14 @@
 import random
 from typing import List
-
+from loguru import logger
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlalchemy.orm import sessionmaker 
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select 
-from .database import get_session, get_get_session
-from .models import MessageTable, ReceivedMessage, ReplyMessage, SessionTable, SessionTable
+from ..database import get_session, get_get_session
+from ..models import MessageTable, ReceivedMessage, ReplyMessage, SenderType
+from ..models import NewSession, SessionTable, ReplySession
 from typing import Annotated
 
 # from src.app.schemas import ChatRequest, ChatResponse, HistoryResponse, MessageResponse
@@ -37,6 +38,7 @@ async def send_message(
     发送消息并获取回复
     """
     db_message = MessageTable.model_validate(request)
+    # db_message.sender = SenderType.CUSTOMER
     
     async with get_session() as session:
         session.add(db_message)
@@ -47,13 +49,13 @@ async def send_message(
     reply_message = random.choice(SAMPLE_REPLIES)
 
     async with get_session() as session:
-        db_message_received = await session.get(MessageTable, received_message_id)
         db_message_reply = MessageTable(
-            session_id=db_message_received.session_id,
+            session_id=db_message.session_id,
             message=reply_message,
-            # sender='customer service',
+            sender=SenderType.CUSTOMER_SERVICE,
             send_status=0,
         )
+        db_message_received = await session.get(MessageTable, received_message_id)
         db_message_received.send_status = 0 
 
         session.add_all([db_message_received, db_message_reply])
@@ -62,29 +64,14 @@ async def send_message(
         return db_message_reply
     
 
-@router.get("/history", response_model=list[MessageTable])
-async def get_chat_history(
-    session_id: str,
+@router.post('/new_session', response_model=ReplySession)
+async def create_new_session(
+    request: NewSession,
     session: Annotated[AsyncSession, Depends(get_session)]
 ):
-    """
-    获取聊天历史
-    """
-    stmt = select(MessageTable).where(MessageTable.session_id == session_id)
-    res = await session.exec(stmt)
-    res2 = res.all()
-    return res2 
-
-
-@router.get("/history_all", response_model=list[MessageTable])
-async def get_chat_history_all(
-    # session_id: str,
-    session: Annotated[AsyncSession, Depends(get_session)]
-):
-    """
-    获取聊天历史
-    """
-    stmt = select(MessageTable)
-    res = await session.exec(stmt)
-    res2 = res.all()
-    return res2 
+    new_session = SessionTable.model_validate(request)
+    session.add(new_session)
+    await session.commit()
+    await session.refresh(new_session)
+    return new_session
+ 

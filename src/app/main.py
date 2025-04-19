@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 
 from .database import create_db_and_tables
-from .routers import router as chat_router
+from .routers import router_chat, router_debug, router_view
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -31,7 +31,9 @@ app.add_middleware(
 )
 
 # 添加路由
-app.include_router(chat_router)
+app.include_router(router_chat.router)
+app.include_router(router_debug.router)
+app.include_router(router_view.router)
 
 @app.get("/")
 async def root():
