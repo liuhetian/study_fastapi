@@ -46,7 +46,9 @@ class BaseSession(SQLModel):
 
     @property
     def ticket_info_pydantic(self) -> SessionInfo:
-        return SessionInfo.model_validate(self.ticket_info)
+        if not hasattr(self, '_ticket_info_pydantic'):
+            self._ticket_info_pydantic = SessionInfo.model_validate(self.ticket_info)
+        return self._ticket_info_pydantic
 
 
 class NewSession(BaseSession):
