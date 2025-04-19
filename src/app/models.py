@@ -33,14 +33,14 @@ class ReceivedMessage(BaseMessage):
 class ReplyMessage(BaseMessage):
     message_id: UUID = Field(default_factory=uuid4, primary_key=True)
     
-# 工单信息
+# 工单信息-----------------------------------
 
 class SessionInfo(BaseModel):
     user_id: str | None = None 
 
 class BaseSession(SQLModel):
     session_id: str = Field(primary_key=True)
-    status: str | None = Field(default=None)  # 会话状态  可能关单？
+    status: int | None = Field(default=None)  # 会话状态  可能关单？
     ticket_info: dict = Field(sa_column=Column(JSON))
     # game_cd: int = Field(index=True)
 
